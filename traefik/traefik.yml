@@ -1,0 +1,33 @@
+api:
+  dashboard: true
+  insecure: true  # Dashboard on port 8080, Tailscale-only access
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "afraimjoseph@gmail.com"
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web
+
+providers:
+  file:
+    filename: /data/config/dynamic.yml
+    watch: true
+
+log:
+  level: INFO
+
+accessLog: {}

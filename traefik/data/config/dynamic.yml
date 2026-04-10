@@ -1,0 +1,106 @@
+http:
+  routers:
+
+    # -------------------------------------------------------
+    # afraaaaaim.dev — Main site (Next.js)
+    # Handles both bare domain and www, www redirects to bare
+    # -------------------------------------------------------
+    main-site:
+      rule: "Host(`afraaaaaim.dev`)"          # change to your own domain :D
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+      service: main-site
+
+    www-redirect:
+      rule: "Host(`www.afraaaaaim.dev`)"            # change to your own subdomain :D
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - www-to-bare
+        - secure-headers
+      service: main-site
+
+    # -------------------------------------------------------
+    # forgejo.afraaaaaim.dev — Forgejo git (homeserver via Tailscale)
+    # Large body size allowed for git push
+    # -------------------------------------------------------
+    forgejo:
+      rule: "Host(`forgejo.afraaaaaim.dev`)"           # change to your own subdomain :D
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - forgejo-limits
+        - secure-headers
+      service: forgejo
+
+    # -------------------------------------------------------
+    # ittools.afraaaaaim.dev — IT Tools (homeserver via Tailscale)    
+    # -------------------------------------------------------
+    ittools:
+      rule: "Host(`ittools.afraaaaaim.dev`)"           # change to your own subdomain :D
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+      service: ittools
+
+  # ---------------------------------------------------------
+  # Services — where traffic gets forwarded to
+  # ---------------------------------------------------------
+  services:
+
+    main-site:
+      loadBalancer:
+        servers:
+          - url: "http://nextjs_app:3000"               # My Next.js app is running on docker but locked from external access, Traefik will forward to it internally
+        passHostHeader: true
+
+    forgejo:
+      loadBalancer:
+        servers:
+          - url: "http://100.80.54.12:9203"             # This is my private IP on Tailscale, change it to match your own setup, most likely the same 127.0.0.1 but different port
+        passHostHeader: true
+
+    ittools:
+      loadBalancer:
+        servers:
+          - url: "http://100.80.54.12:9204"             # This is my private IP on Tailscale, change it to match your own setup, most likely the same 127.0.0.1 but different port
+        passHostHeader: true
+
+  # ---------------------------------------------------------
+  # Middlewares
+  # ---------------------------------------------------------
+  middlewares:
+
+    # Redirect www to bare domain permanently
+    www-to-bare:
+      redirectRegex:
+        regex: "^https://www\\.afraaaaaim\\.dev(.*)"    # change to your own domain :D
+        replacement: "https://afraaaaaim.dev${1}"       # change to your own domain :D
+        permanent: true
+
+    # Forgejo: allow large uploads for git push (512MB)
+    forgejo-limits:
+      buffering:
+        maxRequestBodyBytes: 536870912
+
+    # Security headers applied to all routers
+    secure-headers:
+      headers:
+        browserXssFilter: true          # Block reflected XSS attacks
+        contentTypeNosniff: true        # Prevent MIME type sniffing
+        frameDeny: true                 # Block clickjacking via iframes    <---- This will probably break things in future iframes are needed, but for now it's good to have
+        forceSTSHeader: true            # Force HTTPS-only in browsers
+        stsIncludeSubdomains: true      # Apply HTTPS-only to all subdomains
+        stsSeconds: 31536000            # Remember HTTPS-only for 1 year
+

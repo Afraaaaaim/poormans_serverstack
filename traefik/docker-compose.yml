@@ -1,0 +1,20 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"   # Dashboard — Tailscale only, blocked from public via ufw
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./data/acme.json:/data/acme.json
+      - ./data/config:/data/config:ro
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
