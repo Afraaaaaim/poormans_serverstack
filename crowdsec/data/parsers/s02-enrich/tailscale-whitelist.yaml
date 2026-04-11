@@ -1,0 +1,6 @@
+name: custom/tailscale-whitelist
+description: "Whitelist Tailscale CGNAT range"
+whitelist:
+  reason: "Tailscale network"
+  cidr:
+    - "100.64.0.0/10"

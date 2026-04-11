@@ -1,0 +1,30 @@
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PGID=1000
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/linux
+      - BOUNCER_KEY_traefik=${CROWDSEC_BOUNCER_KEY}
+    volumes:
+      - ./data/acquis.yml:/etc/crowdsec/acquis.yaml:ro
+      - crowdsec_data:/var/lib/crowdsec/data
+      - ./data/config:/etc/crowdsec
+      - traefik_logs:/var/log/traefik:ro
+      - /var/log/auth.log:/var/log/auth.log:ro
+      - /var/log/syslog:/var/log/syslog:ro
+    networks:
+      - proxy
+
+volumes:
+  crowdsec_data:
+  traefik_logs:
+    external: true
+    name: traefik_logs
+
+networks:
+  proxy:
+    external: true

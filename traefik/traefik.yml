@@ -27,7 +27,18 @@ providers:
     filename: /data/config/dynamic.yml
     watch: true
 
+# Logs to stdout (docker logs)
 log:
   level: INFO
 
-accessLog: {}
+# Access logs written to file so CrowdSec can read them
+accessLog:
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 100    # Buffer 100 lines before writing to disk
+
+# CrowdSec bouncer plugin
+experimental:
+  plugins:
+    crowdsec-bouncer:
+      moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      version: "v1.4.2"

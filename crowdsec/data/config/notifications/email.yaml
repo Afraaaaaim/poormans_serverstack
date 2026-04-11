@@ -1,0 +1,24 @@
+type: email
+name: email_default
+
+log_level: info
+
+format: |
+  {{range . -}}
+  CrowdSec Alert
+  --------------
+  Reason: {{.Scenario}}
+  IP: {{.Source.IP}}
+  Country: {{.Source.Cn}}
+  Date: {{.StartAt}}
+  {{end -}}
+
+smtp_host: smtp.gmail.com
+smtp_port: 587
+smtp_username: ${SMTP_USERNAME}
+smtp_password: ${SMTP_PASSWORD}
+smtp_from: ${SMTP_USERNAME}
+receiver_emails:
+  - ${ALERT_EMAIL}
+
+encryption_type: starttls

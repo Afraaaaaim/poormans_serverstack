@@ -13,6 +13,7 @@ http:
         certResolver: letsencrypt
       middlewares:
         - secure-headers
+        - crowdsec
       service: main-site
 
     www-redirect:
@@ -24,6 +25,7 @@ http:
       middlewares:
         - www-to-bare
         - secure-headers
+        - crowdsec
       service: main-site
 
     # -------------------------------------------------------
@@ -39,6 +41,7 @@ http:
       middlewares:
         - forgejo-limits
         - secure-headers
+        - crowdsec
       service: forgejo
 
     # -------------------------------------------------------
@@ -52,6 +55,7 @@ http:
         certResolver: letsencrypt
       middlewares:
         - secure-headers
+        - crowdsec
       service: ittools
 
   # ---------------------------------------------------------
@@ -104,3 +108,20 @@ http:
         stsIncludeSubdomains: true      # Apply HTTPS-only to all subdomains
         stsSeconds: 31536000            # Remember HTTPS-only for 1 year
 
+    # CrowdSec bouncer — blocks IPs based on behavior + community blocklist
+    # crowdsecLapiKey must match CROWDSEC_BOUNCER_KEY in crowdsec/.env
+    crowdsec:
+      plugin:
+        crowdsec-bouncer:
+          enabled: true
+          crowdsecMode: stream                      # Pull decisions every 60s (efficient)
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080          # Container name on proxy network
+          crowdsecLapiKey: /secrets/crowdsec_api_key
+          crowdsecLapiTlsInsecureVerify: false
+          clientTrustedIPs:                         # Trust private ranges (Docker internals)
+            - "127.0.0.1/32"
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+            - "192.168.0.0/16"
+            - "100.64.0.0/10"                       # Tailscale IP range

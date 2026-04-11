@@ -12,8 +12,14 @@ services:
       - ./traefik.yml:/traefik.yml:ro
       - ./data/acme.json:/data/acme.json
       - ./data/config:/data/config:ro
+      - logs:/var/log/traefik  # Shared with CrowdSec for log parsing
+      - ./secrets:/secrets:ro # For any future secrets like TLS certs, API keys, etc.
     networks:
       - proxy
+
+volumes:
+  logs:
+    name: traefik_logs  # Named volume shared with CrowdSec container
 
 networks:
   proxy:

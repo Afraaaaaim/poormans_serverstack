@@ -1,0 +1,19 @@
+# -------------------------------------------------------
+# CrowdSec Log Acquisition Config
+# Tells CrowdSec which logs to watch and parse
+# -------------------------------------------------------
+
+# Traefik access logs — main source of threat detection
+filenames:
+  - /var/log/traefik/*.log
+labels:
+  type: traefik
+
+---
+
+# System auth logs — detect SSH brute force etc.
+filenames:
+  - /var/log/auth.log
+  - /var/log/syslog
+labels:
+  type: syslog

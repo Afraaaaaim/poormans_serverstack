@@ -2,8 +2,3 @@
 .env
 *.env
 !*.env.example
-
-
-
-# Traefik SSL certs — never commit
-traefik/data/acme.json

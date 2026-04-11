@@ -1,0 +1,5 @@
+secrets/
+
+
+# Traefik SSL certs — never commit
+data/acme.json
