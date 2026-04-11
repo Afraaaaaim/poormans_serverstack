@@ -1,0 +1,81 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: authentik-redis
+    restart: unless-stopped
+    command: --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-server
+    restart: unless-stopped
+    command: server
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
+      AUTHENTIK_POSTGRESQL__PORT: ${PG_PORT}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASSWORD}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    volumes:
+      - media:/media
+      - templates:/templates
+    networks:
+      - proxy
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authentik.rule=Host(`${AUTHENTIK_DOMAIN}`)"
+      - "traefik.http.routers.authentik.entrypoints=websecure"
+      - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authentik.loadbalancer.server.port=9000"
+      - "traefik.docker.network=proxy"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: ${PG_HOST}
+      AUTHENTIK_POSTGRESQL__PORT: ${PG_PORT}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASSWORD}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    volumes:
+      - media:/media
+      - templates:/templates
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - proxy
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:
+  media:
+  templates:
+
+networks:
+  proxy:
+    external: true

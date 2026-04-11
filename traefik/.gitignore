@@ -3,3 +3,5 @@ secrets/
 
 # Traefik SSL certs — never commit
 data/acme.json
+secrets/
+data/config/dynamic.yml

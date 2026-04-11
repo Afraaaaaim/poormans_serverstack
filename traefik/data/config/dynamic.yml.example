@@ -1,0 +1,93 @@
+http:
+  routers:
+
+    # -------------------------------------------------------
+    # example.com — Main site
+    # -------------------------------------------------------
+    main-site:
+      rule: "Host(`example.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+        - crowdsec
+      service: main-site
+
+    # -------------------------------------------------------
+    # app.example.com — Internal app via Tailscale or Docker
+    # -------------------------------------------------------
+    my-app:
+      rule: "Host(`app.example.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+        - crowdsec
+      service: my-app
+
+  # ---------------------------------------------------------
+  # Services
+  # ---------------------------------------------------------
+  services:
+
+    main-site:
+      loadBalancer:
+        servers:
+          - url: "http://container-name:3000"   # Docker container on proxy network
+        passHostHeader: true
+
+    my-app:
+      loadBalancer:
+        servers:
+          - url: "http://100.x.x.x:8080"       # Tailscale IP, or 127.0.0.1:PORT for local
+        passHostHeader: true
+
+  # ---------------------------------------------------------
+  # Middlewares
+  # ---------------------------------------------------------
+  middlewares:
+
+    # Redirect www to bare domain
+    www-to-bare:
+      redirectRegex:
+        regex: "^https://www\\.example\\.com(.*)"
+        replacement: "https://example.com${1}"
+        permanent: true
+
+    # Allow large uploads (e.g. git push)
+    large-upload:
+      buffering:
+        maxRequestBodyBytes: 536870912    # 512MB
+
+    # Security headers
+    secure-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true                   # Remove if you need iframes
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsSeconds: 31536000
+
+    # CrowdSec bouncer
+    # Generate key with: cscli bouncers add my-bouncer
+    # Never commit the real key — gitignore this file and keep a dynamic.yml.example in git
+    crowdsec:
+      plugin:
+        crowdsec-bouncer:
+          enabled: true
+          crowdsecMode: stream
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080       # CrowdSec container name on proxy network
+          crowdsecLapiKey: YOUR_BOUNCER_KEY_HERE
+          crowdsecLapiTlsInsecureVerify: false
+          clientTrustedIPs:
+            - "127.0.0.1/32"
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+            - "192.168.0.0/16"
+            - "100.64.0.0/10"                   # Tailscale range — remove if not using

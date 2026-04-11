@@ -58,6 +58,17 @@ http:
         - crowdsec
       service: ittools
 
+    authentik:
+      rule: "Host(`auth.afraaaaaim.dev`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        # - secure-headers
+        - crowdsec 
+      service: authentik
+      
   # ---------------------------------------------------------
   # Services — where traffic gets forwarded to
   # ---------------------------------------------------------
@@ -81,6 +92,10 @@ http:
           - url: "http://100.80.54.12:9204"             # This is my private IP on Tailscale, change it to match your own setup, most likely the same 127.0.0.1 but different port
         passHostHeader: true
 
+    authentik:
+      loadBalancer:
+        servers:
+          - url: "http://authentik-server:9000"
   # ---------------------------------------------------------
   # Middlewares
   # ---------------------------------------------------------
