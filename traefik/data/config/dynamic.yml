@@ -49,6 +49,7 @@ http:
     # -------------------------------------------------------
     ittools:
       rule: "Host(`ittools.afraaaaaim.dev`)"           # change to your own subdomain :D
+      priority: 10
       entryPoints:
         - websecure
       tls:
@@ -56,7 +57,22 @@ http:
       middlewares:
         - secure-headers
         - crowdsec
+        - authentik-forward-auth    # <-- added
       service: ittools
+
+    # -------------------------------------------------------
+    # Authentik forward auth callback — required for SSO redirect to work
+    # -------------------------------------------------------
+    authentik-outpost:
+      rule: "Host(`ittools.afraaaaaim.dev`) && PathPrefix(`/outpost.goauthentik.io/`)"
+      priority: 15
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - crowdsec
+      service: authentik
 
     authentik:
       rule: "Host(`auth.afraaaaaim.dev`)"
@@ -96,6 +112,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://authentik-server:9000"
+
+    authentik-forward-auth:
+      loadBalancer:
+        servers:
+          - url: http://authentik-server:9000/outpost.goauthentik.io
   # ---------------------------------------------------------
   # Middlewares
   # ---------------------------------------------------------
@@ -123,6 +144,27 @@ http:
         stsIncludeSubdomains: true      # Apply HTTPS-only to all subdomains
         stsSeconds: 31536000            # Remember HTTPS-only for 1 year
 
+    # -------------------------------------------------------
+    # Authentik forward auth middleware
+    # Traefik asks Authentik to verify every request to protected apps
+    # -------------------------------------------------------
+    authentik-forward-auth:
+      forwardAuth:
+        address: "http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-authentik-username
+          - X-authentik-groups
+          - X-authentik-entitlements
+          - X-authentik-email
+          - X-authentik-name
+          - X-authentik-uid
+          - X-authentik-jwt
+          - X-authentik-meta-jwks
+          - X-authentik-meta-outpost
+          - X-authentik-meta-provider
+          - X-authentik-meta-app
+          - X-authentik-meta-version
     # CrowdSec bouncer — blocks IPs based on behavior + community blocklist
     # crowdsecLapiKey must match CROWDSEC_BOUNCER_KEY in crowdsec/.env
     crowdsec:

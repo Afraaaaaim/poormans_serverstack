@@ -16,7 +16,7 @@ services:
       retries: 5
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2024.12.3
+    image: ghcr.io/goauthentik/server:2026.2.2
     container_name: authentik-server
     restart: unless-stopped
     command: server
@@ -47,7 +47,7 @@ services:
       - "traefik.docker.network=proxy"
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2024.12.3
+    image: ghcr.io/goauthentik/server:2026.2.2
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
@@ -61,6 +61,7 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASSWORD}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_WORKER__TIMEOUT: 300
     volumes:
       - media:/media
       - templates:/templates
