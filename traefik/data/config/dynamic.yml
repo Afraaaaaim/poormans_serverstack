@@ -1,3 +1,8 @@
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true
 http:
   routers:
 
@@ -59,6 +64,21 @@ http:
         - crowdsec
         - authentik-forward-auth    # <-- added
       service: ittools
+      
+    # # -------------------------------------------------------
+    # # transmute.afraaaaaim.dev — Transmute (homeserver via Tailscale)
+    # # -------------------------------------------------------
+    transmute:
+      rule: "Host(`transmute.afraaaaaim.dev`)"
+      # priority: 11
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+        - crowdsec
+      service: transmute
 
     # -------------------------------------------------------
     # Authentik forward auth callback — required for SSO redirect to work
@@ -80,9 +100,20 @@ http:
         - websecure
       tls:
         certResolver: letsencrypt
+        options: default   # <-- ADD THIS
       middlewares:
         # - secure-headers
         - crowdsec 
+      service: authentik
+    
+    unauth:
+      rule: "Host(`unauth.afraaaaaim.dev`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - unauth-redirect
       service: authentik
       
   # ---------------------------------------------------------
@@ -117,6 +148,12 @@ http:
       loadBalancer:
         servers:
           - url: http://authentik-server:9000/outpost.goauthentik.io
+
+    transmute:
+      loadBalancer:
+        servers:
+          - url: "http://100.80.54.12:9205"
+        passHostHeader: true
   # ---------------------------------------------------------
   # Middlewares
   # ---------------------------------------------------------
@@ -129,10 +166,18 @@ http:
         replacement: "https://afraaaaaim.dev${1}"       # change to your own domain :D
         permanent: true
 
+    unauth-redirect:
+      redirectRegex:
+        regex: ".*"
+        replacement: "https://auth.afraaaaaim.dev/if/flow/default-invalidation-flow/"
+        permanent: false
+
     # Forgejo: allow large uploads for git push (512MB)
     forgejo-limits:
       buffering:
         maxRequestBodyBytes: 536870912
+        maxResponseBodyBytes: 536870912
+        retryExpression: "IsNetworkError() && Attempts() < 2"
 
     # Security headers applied to all routers
     secure-headers:

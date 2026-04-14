@@ -1,19 +1,29 @@
+name: ssh_time_based_remediation
+filters:
+  - Alert.GetScenario() in ["crowdsecurity/ssh-time-based-bf", "crowdsecurity/ssh-time-based-bf_user-enum"] && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+notifications:
+  - email_default
+on_success: break
+---
 name: default_ip_remediation
 filters:
- - Alert.Remediation == true && Alert.GetScope() == "Ip"
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
 decisions:
- - type: ban
-   duration: 4h
+  - type: ban
+    duration: 4h
 notifications:
   - email_default
 on_success: break
 ---
 name: default_range_remediation
 filters:
- - Alert.Remediation == true && Alert.GetScope() == "Range"
+  - Alert.Remediation == true && Alert.GetScope() == "Range"
 decisions:
- - type: ban
-   duration: 4h
+  - type: ban
+    duration: 4h
 notifications:
   - email_default
 on_success: break

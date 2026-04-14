@@ -6,7 +6,7 @@ init-authentik:
 	docker run --rm \
 		-e PGPASSWORD=$$PG_ADMIN_PASSWORD \
 		postgres:17-alpine \
-		psql -h $$PG_HOST -p $$PG_PORT -U $$PG_ADMIN_USER \
+		psql -h $$PG_HOST -p $$PG_PORT -U $$PG_ADMIN_USER -d $$PG_ADMIN_DB \
 		-c "CREATE USER $$PG_USER WITH PASSWORD '$$PG_PASSWORD';" \
 		-c "CREATE DATABASE $$PG_DB OWNER $$PG_USER;" \
 		-c "GRANT ALL PRIVILEGES ON DATABASE $$PG_DB TO $$PG_USER;" \
