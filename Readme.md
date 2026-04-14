@@ -1,6 +1,6 @@
 # 🏰 Serverstack
 
-A self-hosted server stack built around Traefik as the reverse proxy, with CrowdSec for threat detection and automated IP banning.
+A self-hosted server stack built around Traefik as the reverse proxy, with CrowdSec for threat detection and automated IP banning, and Authentik for identity management and SSO.
 
 > **Status:** Work in progress. More stacks will be added over time.
 
@@ -12,6 +12,7 @@ A self-hosted server stack built around Traefik as the reverse proxy, with Crowd
 |-----------|----------------------------------|
 | Traefik   | Reverse proxy, SSL termination   |
 | CrowdSec  | Threat detection + IP banning    |
+| Authentik | Identity provider + SSO          |
 
 ---
 
@@ -21,6 +22,15 @@ A self-hosted server stack built around Traefik as the reverse proxy, with Crowd
 - A domain pointing to your server's public IP
 - Ports `80` and `443` open on your firewall
 - (Optional) Tailscale for secure remote access
+- PostgreSQL client (for Authentik database initialization)
+
+---
+
+## Setup Order
+
+1. **Traefik** - Set up the reverse proxy first
+2. **CrowdSec** - Add security layer
+3. **Authentik** - Add authentication (requires Traefik and CrowdSec running)
 
 ---
 
@@ -98,6 +108,120 @@ crowdsec/
     └── parsers/
         └── s02-enrich/
             └── tailscale-whitelist.yaml
+```
+
+### Steps
+
+**1. Copy the environment template:**
+```bash
+cp crowdsec/.env.example crowdsec/.env
+```
+
+**2. Edit `crowdsec/.env`:**
+- Set `CROWDSEC_BOUNCER_KEY` to a secure random string (used by Traefik plugin)
+
+**3. Update `crowdsec/data/config/notifications/email.yaml`:**
+- Configure your email settings for alerts
+
+**4. Start CrowdSec:**
+```bash
+cd crowdsec
+docker compose up -d
+```
+
+**5. Verify:**
+```bash
+docker logs crowdsec | tail -20
+```
+
+---
+
+## 3. Authentik Setup
+
+Authentik provides identity management, SSO, and forward authentication for your services.
+
+### Folder structure
+
+```
+authentik/
+├── docker-compose.yml
+├── .env                      # Secrets (not committed)
+├── .env.example              # Template for .env
+└── Makefile                  # Helper commands
+```
+
+### Steps
+
+**1. Copy the environment template:**
+```bash
+cp authentik/.env.example authentik/.env
+```
+
+**2. Edit `authentik/.env`:**
+- Set PostgreSQL credentials (use strong passwords)
+- Set `AUTHENTIK_SECRET_KEY` to a secure random string
+- Set `AUTHENTIK_DOMAIN` to your Authentik subdomain (e.g., `auth.yourdomain.dev`)
+- Set `AUTHENTIK_HOST` to the same value
+
+**3. Initialize the database:**
+```bash
+cd authentik
+make init-authentik
+```
+*Note: This requires PostgreSQL client and access to your database server. If using Tailscale, ensure connectivity.*
+
+**4. Start Authentik:**
+```bash
+make up-authentik
+```
+
+**5. Access Authentik:**
+- Go to `https://your-authentik-domain` (set in `AUTHENTIK_DOMAIN`)
+- Default admin credentials: `akadmin` / `goauthentik`
+
+**6. Initial setup:**
+- Change the default password
+- Configure your identity providers, applications, and flows
+
+**7. Update Traefik config:**
+- In `traefik/data/config/dynamic.yml`, ensure Authentik routers are configured
+- Add forward auth middleware to protected services
+
+**8. Verify:**
+```bash
+docker logs authentik-server | tail -20
+```
+
+---
+
+## Additional Services
+
+The stack is designed to be extensible. Add new services by:
+
+1. Creating a Docker Compose file in a new folder
+2. Adding routers, middlewares, and services to `traefik/data/config/dynamic.yml`
+3. (Optional) Integrating with Authentik for authentication
+
+---
+
+## Security Notes
+
+- Never commit `.env` files or actual secrets to version control
+- Use strong, unique passwords for all services
+- Keep Docker images updated
+- Monitor CrowdSec alerts regularly
+- Use Tailscale for secure remote access to dashboards
+
+---
+
+## Troubleshooting
+
+- **Traefik not starting:** Check Docker network `proxy` exists
+- **SSL certs not issuing:** Verify domain DNS and email in `traefik.yml`
+- **CrowdSec not banning:** Check log file permissions and bouncer key
+- **Authentik database issues:** Ensure PostgreSQL connectivity and credentials
+
+For more help, check the logs of individual services with `docker logs <container_name>`.
 ```
 
 ### Steps
